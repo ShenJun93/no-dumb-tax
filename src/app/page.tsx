@@ -1,69 +1,58 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+
+declare global {
+  interface Window {
+    paypal?: any;
+  }
+}
 
 export default function Home() {
+  const [error, setError] = useState("");
+  const rendered = useRef(false);
+
+  useEffect(() => {
+    (async () => {
+      const { clientId, planId } = await fetch("/api/demo").then((r) => r.json());
+      if (!clientId || !planId) return setError("Demo plan is not configured.");
+      const script = document.createElement("script");
+      script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&vault=true&intent=subscription`;
+      script.onload = () => {
+        if (rendered.current || !window.paypal) return;
+        rendered.current = true;
+        window.paypal
+          .Buttons({
+            style: { label: "subscribe" },
+            createSubscription: (_: unknown, actions: any) => actions.subscription.create({ plan_id: planId }),
+            onApprove: async (data: { subscriptionID: string }) => {
+              const r = await fetch("/api/subscriptions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ subscriptionId: data.subscriptionID, language: navigator.language }),
+              }).then((x) => x.json());
+              if (r.portalUrl) window.location.href = r.portalUrl;
+              else setError(r.error ?? "Could not register the subscription.");
+            },
+            onError: () => setError("PayPal could not start the subscription."),
+          })
+          .render("#paypal-button");
+      };
+      document.body.appendChild(script);
+    })();
+  }, []);
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.tsx</code> file.
-          </h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <>
+      <h1>Notely Pro — try it free for 1 day</h1>
+      <p>A demo SaaS that sells a subscription with a free trial through PayPal (sandbox, no real money).</p>
+      <div className="card notice">
+        <strong>The honest version:</strong> after your free day you pay $9.99/month. We will remind you before the first charge, and you
+        can cancel in one click. Forgot anyway? Tell us, and the obvious mistakes are refunded automatically.
+      </div>
+      <div id="paypal-button" />
+      {error && <p className="danger">{error}</p>}
+    </>
   );
 }
