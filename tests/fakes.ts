@@ -1,3 +1,5 @@
+import type { Llm } from "@/lib/llm";
+
 export type Route = (url: string, init: RequestInit) => Response | Promise<Response>;
 
 export function json(status: number, body: unknown): Response {
@@ -24,3 +26,14 @@ export function fakeFetch(routes: Record<string, Route>) {
 export const tokenRoute: Record<string, Route> = {
   "POST https://pp.test/v1/oauth2/token": () => json(200, { access_token: "tok", expires_in: 3600 }),
 };
+
+export class FakeLlm implements Llm {
+  calls: { system: string; user: string }[] = [];
+  constructor(private answers: string[] | ((system: string, user: string) => string) | Error) {}
+  async complete(system: string, user: string) {
+    this.calls.push({ system, user });
+    if (this.answers instanceof Error) throw this.answers;
+    if (typeof this.answers === "function") return this.answers(system, user);
+    return this.answers.shift() ?? "";
+  }
+}
