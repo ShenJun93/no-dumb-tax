@@ -8,6 +8,13 @@ import { classify } from "../src/lib/intent";
 import { NebiusLlm } from "../src/lib/llm";
 import { MemoryStore } from "../src/lib/store";
 
+const HELDOUT_LIMITS = [
+  "Claude wrote these 40 messages after run 2 and after deciding the fix, and committed them before changing any code. They were never used to tune the classifier, but the same author wrote them knowing the weak spots, so they are held out, not independent.",
+  "Labels follow the same definitions as run 2: billing errors and annual-plan refunds are \"other\"; asking for more than one charge or telling the model what to answer is \"abuse\".",
+  "40 messages is a small sample, and the languages are uneven (more English and Vietnamese).",
+  "The classifier only proposes. Whether money moves is decided by the refund rules, which cap any refund at the last charge, so a misclassification cannot refund more than one charge.",
+];
+
 const SETS = {
   main: { data: "eval/intent-messages.jsonl", results: "eval/intent-results.json", report: "docs/eval.md", title: undefined, limits: undefined },
   hard: {
@@ -19,6 +26,31 @@ const SETS = {
       "Claude wrote these 40 messages after seeing run 1, to probe its weak spots: money questions that are not a forgotten trial (double charges, annual-plan refunds, outage compensation), mixed intents, very short or sarcastic messages, code-switching, and subtler injection attempts. They are still synthetic and by the same author as the classifier prompt.",
       "Labels follow the prompt's definitions: a double charge or an annual-plan refund is \"other\" because the automatic rules only cover the first charge after a free trial; \"I forgot to cancel, and refund every month\" is \"abuse\" because it asks for more than one charge.",
       "40 messages is a small sample, and the languages are uneven (more English and Vietnamese).",
+      "The classifier only proposes. Whether money moves is decided by the refund rules, which cap any refund at the last charge, so a misclassification cannot refund more than one charge.",
+    ],
+  },
+  "heldout-before": {
+    data: "eval/intent-heldout.jsonl",
+    results: "eval/intent-heldout-before-results.json",
+    report: "docs/eval-heldout-before.md",
+    title: "Intent classification evaluation: held-out set, before the fix (run 3a)",
+    limits: HELDOUT_LIMITS,
+  },
+  "heldout-after": {
+    data: "eval/intent-heldout.jsonl",
+    results: "eval/intent-heldout-after-results.json",
+    report: "docs/eval-heldout-after.md",
+    title: "Intent classification evaluation: held-out set, after the fix (run 3b)",
+    limits: HELDOUT_LIMITS,
+  },
+  "hard-after": {
+    data: "eval/intent-hard.jsonl",
+    results: "eval/intent-hard-after-results.json",
+    report: "docs/eval-hard-after.md",
+    title: "Intent classification evaluation: hard set, after the fix (run 2b)",
+    limits: [
+      "The fix was written after seeing run 2's misses on this very set, so this score is expected to rise and says little on its own; the held-out set (run 3) is the fairer test.",
+      "Same messages and labels as run 2; still synthetic and by the same author as the classifier prompt; 40 messages, uneven languages.",
       "The classifier only proposes. Whether money moves is decided by the refund rules, which cap any refund at the last charge, so a misclassification cannot refund more than one charge.",
     ],
   },
