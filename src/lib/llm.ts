@@ -7,6 +7,12 @@ export interface Llm {
 
 export class LlmUnavailable extends Error {}
 
+/** One shared daily budget for every model call (classifier, reminders, assistant, Studio AI). */
+export async function takeLlmBudget(store: Store, cap: number, now: Date = new Date()): Promise<boolean> {
+  const used = await store.incr(`llm:${now.toISOString().slice(0, 10)}`, 2 * 86400);
+  return used <= cap;
+}
+
 export class NebiusLlm implements Llm {
   private client: OpenAI;
 
@@ -19,9 +25,7 @@ export class NebiusLlm implements Llm {
 
   async complete(system: string, user: string, opts: { json?: boolean; maxTokens?: number } = {}) {
     if (!this.cfg.apiKey) throw new LlmUnavailable("No model key configured");
-    const day = new Date().toISOString().slice(0, 10);
-    const used = await this.store.incr(`llm:${day}`, 2 * 86400);
-    if (used > this.cfg.dailyCap) throw new LlmUnavailable("Daily model budget reached");
+    if (!(await takeLlmBudget(this.store, this.cfg.dailyCap))) throw new LlmUnavailable("Daily model budget reached");
     try {
       const res = await this.client.chat.completions.create({
         model: this.cfg.model,
