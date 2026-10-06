@@ -14,3 +14,4 @@ textarea, input { width: 100%; padding: 8px; border: 1px solid var(--line); bord
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 td, th { text-align: left; padding: 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .muted { color: var(--muted); font-size: 14px; }
+main:has(.wide) { max-width: 1400px; }
