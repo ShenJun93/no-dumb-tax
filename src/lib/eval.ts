@@ -100,5 +100,11 @@ export function formatReport(score: Score, rows: EvalResult[], meta: { model: st
     "|---|---|---|---|---|",
     ...misses.map((m) => `| ${m.id} | ${m.label} | ${m.predicted} | ${m.source} | ${m.text.replace(/\|/g, "\\|")} |`),
     "",
+    "## Limits",
+    "",
+    "- Each message has one clear intent, and Claude wrote them, so this score is an optimistic estimate. Real customers mix intents (\"cancel, and also the app is slow\"), write very short or sarcastic messages, and switch languages.",
+    "- 5 messages per class and language is a small sample: one miss moves a class-language cell by 20 points.",
+    "- The classifier only proposes. Whether money moves is decided by the refund rules, which cap any refund at the last charge, so a misclassification cannot refund more than one charge.",
+    "",
   ].join("\n");
 }

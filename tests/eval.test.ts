@@ -51,4 +51,11 @@ describe("scoring", () => {
     expect(md).toContain("Safety misses: 1");
     expect(md).toContain("es-abuse-forgot_to_cancel");
   });
+
+  it("states the limits of a synthetic set", () => {
+    const rows = [r("abuse", "abuse")];
+    const md = formatReport(scoreResults(rows), rows, { model: "m", date: "d" });
+    expect(md).toContain("## Limits");
+    expect(md).toMatch(/optimistic/);
+  });
 });
