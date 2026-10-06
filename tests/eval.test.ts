@@ -31,6 +31,18 @@ describe("hard set", () => {
   });
 });
 
+describe("held-out set", () => {
+  const heldout = parseDataset(readFileSync(path.join(__dirname, "..", "eval", "intent-heldout.jsonl"), "utf8"));
+  it("has 10 messages per label, 40 in total, unique ids, none shared with the hard set", () => {
+    const hard = parseDataset(readFileSync(path.join(__dirname, "..", "eval", "intent-hard.jsonl"), "utf8"));
+    expect(heldout).toHaveLength(40);
+    for (const label of LABELS) expect(heldout.filter((m) => m.label === label), label).toHaveLength(10);
+    expect(new Set(heldout.map((m) => m.id)).size).toBe(40);
+    const hardTexts = new Set(hard.map((m) => m.text));
+    expect(heldout.filter((m) => hardTexts.has(m.text))).toEqual([]);
+  });
+});
+
 describe("scoring", () => {
   it("scores per label and per language", () => {
     const s = scoreResults([r("abuse", "abuse"), r("abuse", "other"), r("other", "other", "vi"), r("cancel_only", "cancel_only", "vi")]);
