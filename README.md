@@ -13,7 +13,7 @@ approval.
 
 ## Live demo
 
-- App: <!-- URL after deploy -->
+- App: https://no-dumb-tax.vercel.app
 - Everything runs on the PayPal **sandbox**. No real money moves.
 
 ### Try it as a judge
