@@ -2,7 +2,22 @@
 
 Honest free trials on PayPal Subscriptions.
 
-<!-- OWNER: your story in your own words -->
+## Inspiration
+
+I keep paying what I call a "dumb tax". In Vietnamese we say *học phí ngu*: the tuition you pay
+for being careless. I sign up for a free trial, don't read the terms closely or forget to turn off
+auto-renew, and a few days later the charge lands on my Visa debit card. Each time it is my
+mistake. Each time it also feels like the product was counting on me forgetting.
+
+I don't think the fix is to make customers more careful. It is to make free trials honest. Tell
+people clearly, in their own language, exactly when they will be charged and how much. Let them
+cancel in one click. And when someone obviously forgot, give the money back quickly instead of
+waiting for a dispute. For a small merchant this is also the cheaper path: a refunded $9.99 costs
+less than a chargeback and a customer who never comes back.
+
+No Dumb Tax is the tool I wish the services I signed up for had used.
+
+## What it does
 
 A free trial that quietly turns into a charge feels like a trap, and the people it catches rarely
 accept it: they open a dispute or a chargeback, and the merchant pays a fee and usually loses the
