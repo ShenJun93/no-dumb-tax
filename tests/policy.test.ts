@@ -63,6 +63,15 @@ describe("decide", () => {
     }
   });
 
+  it("sends a charge that differs from the plan price to the merchant", () => {
+    const wrongAmount = { ...facts([{ ...paid(3), amount: "19.99" }]), price: { value: "9.99", currency: "USD" } };
+    const d = decide({ facts: wrongAmount, intent: "forgot_to_cancel", priorRefunds: 0, now });
+    expect(d.mode).toBe("merchant");
+    expect(d.reasons.join(" ")).toMatch(/19\.99.*9\.99/);
+    const rightAmount = { ...facts([paid(3)]), price: { value: "9.99", currency: "USD" } };
+    expect(decide({ facts: rightAmount, intent: "forgot_to_cancel", priorRefunds: 0, now }).mode).toBe("auto");
+  });
+
   it("no trial means no automatic refund", () => {
     expect(decide({ facts: facts([paid(3)], "ACTIVE", false), intent: "forgot_to_cancel", priorRefunds: 0, now }).mode).toBe("merchant");
   });

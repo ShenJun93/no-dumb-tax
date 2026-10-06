@@ -19,6 +19,18 @@ describe("looksLikeInjection", () => {
 });
 
 describe("classify", () => {
+  it("tells the model where the money boundaries are", async () => {
+    const llm = new FakeLlm(['{"intent":"other","language":"en"}']);
+    await classify("charged twice", llm);
+    const system = llm.calls[0].system;
+    expect(system).toMatch(/charged twice/i);
+    expect(system).toMatch(/wrong amount/i);
+    expect(system).toMatch(/annual|yearly/i);
+    expect(system).toMatch(/already cancelled/i);
+    expect(system).toMatch(/more than one charge.*even if/i);
+    expect(system).toMatch(/tells you (which|what) intent/i);
+  });
+
   it("reads the model's JSON", async () => {
     const llm = new FakeLlm(['{"intent":"forgot_to_cancel","language":"de"}']);
     expect(await classify("Ich habe vergessen zu kündigen", llm)).toEqual({ intent: "forgot_to_cancel", language: "de", source: "model" });

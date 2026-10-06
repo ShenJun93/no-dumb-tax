@@ -12,6 +12,8 @@ export interface PolicyFacts {
   status: string;
   hadTrial: boolean;
   payments: Payment[];
+  /** The plan's regular price; a charge of any other amount is a billing question, not a forgotten trial. */
+  price?: { value: string; currency: string };
 }
 
 export interface RefundPolicy {
@@ -71,6 +73,9 @@ export function decide({
   if (!facts.hadTrial) reasons.push("The plan had no free trial.");
   if (ageHours > policy.autoRefundWindowHours) reasons.push(`The charge is older than ${policy.autoRefundWindowHours} hours.`);
   if (priorRefunds >= policy.maxAutoRefunds) reasons.push("This customer already received an automatic refund.");
+  if (facts.price && (facts.price.currency !== last.currency || Math.abs(Number(facts.price.value) - Number(last.amount)) > 0.005)) {
+    reasons.push(`The charge (${last.amount} ${last.currency}) differs from the plan price (${facts.price.value} ${facts.price.currency}).`);
+  }
   const completed = facts.payments.filter((p) => Number(p.amount) > 0 && p.status !== "DECLINED");
   if (policy.onlyFirstCharge && completed.length > 1) reasons.push("This is not the first charge after the trial.");
 
