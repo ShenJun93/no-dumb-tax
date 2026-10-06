@@ -43,6 +43,13 @@ const SETS = {
     title: "Intent classification evaluation: held-out set, after the fix (run 3b)",
     limits: HELDOUT_LIMITS,
   },
+  "main-after": {
+    data: "eval/intent-messages.jsonl",
+    results: "eval/intent-main-after-results.json",
+    report: "docs/eval-main-after.md",
+    title: "Intent classification evaluation: main set, after the fix (run 1b, regression check)",
+    limits: undefined,
+  },
   "hard-after": {
     data: "eval/intent-hard.jsonl",
     results: "eval/intent-hard-after-results.json",

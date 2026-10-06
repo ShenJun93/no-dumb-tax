@@ -103,8 +103,29 @@ a forgotten trial would get, never more. The real gap is the wrong-amount case: 
 charge after a trial and less than 48 hours old, the customer gets a refund and a cancellation they
 did not ask for. Report: [docs/eval-hard.md](docs/eval-hard.md).
 
+**The fix, and a fair re-test.** Before changing anything we wrote a new held-out set (40 messages,
+committed first) and measured the old version on it: 77.5%, 9 safety misses, the same pattern as
+run 2. Then two changes:
+- a rule: an automatic refund needs the charge to equal the plan price, so a wrong amount always
+  goes to the merchant (`src/lib/policy.ts`);
+- the classifier prompt names billing errors as "other", and multi-charge or answer-steering
+  messages as "abuse", even when they also say "I forgot" (`src/lib/intent.ts`).
+
+| Set | Before the fix | After the fix |
+|---|---|---|
+| Run 1, main set (120) | 100%, 0 safety misses | 100%, 0 (no regression) |
+| Run 2, hard set (40), used to find the bugs | 82.5%, 7 | 100%, 0 (tuned on this set, so it proves little) |
+| **Run 3, held-out set (40), never used for tuning** | **77.5%, 9** | **95.0%, 2** |
+
+The two remaining held-out misses: "I was charged even though I already cancelled last week" (the
+rules refund at most that one charge, which this customer wants anyway) and an Italian "I forgot,
+refund the two previous months too" (still capped at one charge, but not flagged as abuse).
+Reports: [run 3 before](docs/eval-heldout-before.md), [run 3 after](docs/eval-heldout-after.md),
+[run 2 after](docs/eval-hard-after.md), [run 1 after](docs/eval-main-after.md). The held-out set was
+written by the same author who knew the weak spots, so it is held out from tuning, not independent.
+
 Full report of run 1, every message and the limits: [docs/eval.md](docs/eval.md). Reproduce with
-`npm run eval:intent` (run 1) or `npm run eval:intent -- --set hard` (run 2) (in-memory store; no PayPal calls; it refuses to overwrite a published run
+`npm run eval:intent -- --set <main|hard|heldout-before|heldout-after|hard-after|main-after>` (in-memory store; no PayPal calls; it refuses to overwrite a published run
 without a model key or when the model falls back).
 
 ### PayPal APIs used
