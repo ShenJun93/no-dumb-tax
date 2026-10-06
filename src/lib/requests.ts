@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { classify } from "./intent";
 import type { Llm } from "./llm";
 import { decide, type Decision, type Intent } from "./policy";
+import { getPolicy } from "./policy-store";
 import { draftReply } from "./reply";
 import type { Store } from "./store";
 import type { SubscriptionService } from "./subscriptions";
@@ -104,10 +105,11 @@ async function processRequest(d: Deps, input: { subscriptionId: string; message:
   const facts = await d.subs.getFacts(input.subscriptionId, nowOf(d));
   const cls = await classify(input.message, d.llm);
   const priorRefunds = (await d.store.get<number>(`refunds:${input.subscriptionId}`)) ?? 0;
-  let decision = decide({ facts, intent: cls.intent, priorRefunds, now: nowOf(d) });
+  const policy = await getPolicy(d.store);
+  let decision = decide({ facts, intent: cls.intent, priorRefunds, now: nowOf(d), policy });
   if (cls.source === "fallback") {
     // The model could not read the message: show the merchant what a forgotten-trial request would get.
-    const proposal = decide({ facts, intent: "forgot_to_cancel", priorRefunds, now: nowOf(d) });
+    const proposal = decide({ facts, intent: "forgot_to_cancel", priorRefunds, now: nowOf(d), policy });
     decision = { ...proposal, mode: "merchant", reasons: ["The assistant could not read this message; a person must decide.", ...proposal.reasons] };
   }
   const r: CustomerRequest = {

@@ -72,6 +72,14 @@ describe("handleCustomerRequest", () => {
     expect(log).toEqual(["cancel I-1", `refund TX1 9.99 ${r.id}`]);
   });
 
+  it("uses the merchant's stored policy", async () => {
+    const { deps: d, log } = deps(60);
+    await d.store.set("policy", { autoRefundWindowHours: 72, maxAutoRefunds: 1, onlyFirstCharge: true });
+    const r = await handleCustomerRequest(d, { subscriptionId: "I-1", message: "I forgot to cancel" });
+    expect(r.status).toBe("done");
+    expect(log).toEqual(["cancel I-1", `refund TX1 9.99 ${r.id}`]);
+  });
+
   it("refunds once when two different requests for one subscription arrive together", async () => {
     const { deps: d, log } = deps();
     d.llm = new FakeLlm((system) => (system.includes("sort customer messages") ? '{"intent":"forgot_to_cancel","language":"en"}' : "ok"));
