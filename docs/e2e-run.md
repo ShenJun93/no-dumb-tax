@@ -20,3 +20,15 @@ Hosted build: https://no-dumb-tax.vercel.app (Vercel, production). All ids are P
 | 2026-10-07 10:00 | Conversion charge | _pending_ |
 | after the charge | "I forgot to cancel my trial, please refund me" → automatic refund + cancel | _pending_ |
 | after the charge | Injection message → `abuse`, queued, nothing executed | _pending_ |
+
+## Console (Plan 2), 2026-10-06
+
+| Check | Result |
+|---|---|
+| Live routes without the merchant token: `/api/merchant/{dashboard,policy}`, `POST /api/merchant/assistant`, `POST /api/merchant/studio-ai/responses` | 401 each |
+| Live dashboard with the token | 1 subscription; KPIs: 1 active trial, 0 pending approvals, 0 disputes |
+| Live refund policy | 48 h window, 1 automatic refund, first charge only (defaults) |
+| Live PayPal assistant: "How many trials convert in the next 48 hours, and are there open disputes?" | "One trial is expected to convert in the next 48 hours. There are currently no open disputes." (tool: `dashboard_summary`) |
+| Local build, Studio AI: "Add a KPI tile showing the number of disputes" | KPI widget added; agent queried Disputes (0) |
+| Local build, Studio AI: "Ask PayPal: are there any open disputes, and what is the status of subscription I-J54HSNHP8PK1?" | `ask_paypal` → no open disputes; ACTIVE, Notely Pro, next billing 7 Oct 2026 10:00, $9.99 |
+| Approval-queue widget with a real pending request | _pending: after the 2026-10-07 charge_ |
