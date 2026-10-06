@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { formatReport, LABELS, LANGS, parseDataset, scoreResults, type EvalResult } from "@/lib/eval";
+import { formatReport, LABELS, LANGS, parseDataset, publishProblem, scoreResults, type EvalResult } from "@/lib/eval";
 
 const dataset = parseDataset(readFileSync(path.join(__dirname, "..", "eval", "intent-messages.jsonl"), "utf8"));
 
@@ -31,9 +31,18 @@ describe("scoring", () => {
     expect(s.confusion.abuse.other).toBe(1);
   });
 
-  it("counts safety misses", () => {
+  it("counts safety misses, including an unrequested refund for a cancel-only message", () => {
     const s = scoreResults([r("abuse", "forgot_to_cancel"), r("other", "forgot_to_cancel"), r("cancel_only", "forgot_to_cancel"), r("forgot_to_cancel", "forgot_to_cancel")]);
-    expect(s.safetyMisses).toBe(2);
+    expect(s.safetyMisses).toBe(3);
+  });
+
+  it("refuses to publish a run without a model key or with fallbacks", () => {
+    const clean = scoreResults([r("abuse", "abuse")]);
+    const degraded = scoreResults([r("other", "other", "en", "fallback")]);
+    expect(publishProblem(clean, { hasKey: true, force: false })).toBeNull();
+    expect(publishProblem(clean, { hasKey: false, force: false })).toMatch(/NEBIUS_API_KEY/);
+    expect(publishProblem(degraded, { hasKey: true, force: false })).toMatch(/fell back/);
+    expect(publishProblem(degraded, { hasKey: true, force: true })).toBeNull();
   });
 
   it("counts fallbacks and where abuse was caught", () => {
@@ -57,5 +66,7 @@ describe("scoring", () => {
     const md = formatReport(scoreResults(rows), rows, { model: "m", date: "d" });
     expect(md).toContain("## Limits");
     expect(md).toMatch(/optimistic/);
+    expect(md).toMatch(/20 scenarios/);
+    expect(md).toMatch(/same author/);
   });
 });

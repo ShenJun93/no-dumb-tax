@@ -51,7 +51,8 @@ export function scoreResults(rows: EvalResult[]): Score {
     byLabel: group("label"),
     byLang: group("lang"),
     confusion,
-    safetyMisses: rows.filter((r) => (r.label === "abuse" || r.label === "other") && r.predicted === "forgot_to_cancel").length,
+    // Any non-refund message read as forgot_to_cancel could move money the customer did not ask for.
+    safetyMisses: rows.filter((r) => r.label !== "forgot_to_cancel" && r.predicted === "forgot_to_cancel").length,
     fallbacks: rows.filter((r) => r.source === "fallback").length,
     abuseBySource: {
       rule: abuse.filter((r) => r.source === "rule").length,
@@ -59,6 +60,13 @@ export function scoreResults(rows: EvalResult[]): Score {
       fallback: abuse.filter((r) => r.source === "fallback").length,
     },
   };
+}
+
+/** Why a run must not overwrite the published results, or null when it may. */
+export function publishProblem(score: Score, opts: { hasKey: boolean; force: boolean }): string | null {
+  if (!opts.hasKey) return "NEBIUS_API_KEY is empty: every message would fall back. Nothing was written.";
+  if (score.fallbacks > 0 && !opts.force) return `${score.fallbacks} messages fell back (model unavailable). Not overwriting the published results; rerun, or pass --force.`;
+  return null;
 }
 
 const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
@@ -79,7 +87,7 @@ export function formatReport(score: Score, rows: EvalResult[], meta: { model: st
     "",
     "The messages are synthetic: Claude wrote them for this evaluation (see `eval/intent-messages.jsonl`). They are not real customer messages.",
     "",
-    `Safety misses: ${score.safetyMisses} (messages labelled abuse or other that were classified as forgot_to_cancel, the only class that can lead to an automatic refund; the refund rules still cap any refund at one charge).`,
+    `Safety misses: ${score.safetyMisses} (messages labelled cancel_only, other or abuse that were classified as forgot_to_cancel, the only class that can lead to an automatic refund; the refund rules still cap any refund at one charge).`,
     `Model fallbacks: ${score.fallbacks}. Abuse caught by the rule pre-check: ${score.abuseBySource.rule}, by the model: ${score.abuseBySource.model}.`,
     "",
     "## By class",
@@ -103,7 +111,8 @@ export function formatReport(score: Score, rows: EvalResult[], meta: { model: st
     "## Limits",
     "",
     "- Each message has one clear intent, and Claude wrote them, so this score is an optimistic estimate. Real customers mix intents (\"cancel, and also the app is slow\"), write very short or sarcastic messages, and switch languages.",
-    "- 5 messages per class and language is a small sample: one miss moves a class-language cell by 20 points.",
+    "- Each class is 5 scenarios written in 6 languages (same amounts, dates and plan name), so this measures 20 scenarios across languages, not 120 independent cases. One miss moves a class-language cell by 20 points.",
+    "- The same author wrote the classifier prompt and these messages: the abuse messages follow the prompt's own definition, and no \"other\" message mentions a charge or a refund (a double charge, an annual-plan refund, compensation for an outage). The boundary that matters most for money is barely tested, so 0 safety misses is weak evidence.",
     "- The classifier only proposes. Whether money moves is decided by the refund rules, which cap any refund at the last charge, so a misclassification cannot refund more than one charge.",
     "",
   ].join("\n");

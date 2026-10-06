@@ -79,10 +79,15 @@ in each of English, Vietnamese, German, French, Spanish and Italian. One run wit
 - forgot to cancel: 30/30 · cancel only: 30/30 · other: 30/30 · abuse or injection: 30/30
   (10 caught by the rule pre-check, 20 by the model, including the Spanish and Italian
   "ignore the rules" messages, which the rule pre-check does not cover)
-- safety misses (abuse or other classified as "forgot to cancel"): 0
+- safety misses (cancel only, other or abuse classified as "forgot to cancel"): 0
 
-The messages are clear and have one intent each, so treat 100% as an optimistic estimate. Real
-messages are messier. Full report, every message and the limits: [docs/eval.md](docs/eval.md).
+Read these numbers with care:
+- Each class is 5 scenarios written in 6 languages, so this measures 20 scenarios across
+  languages, not 120 independent cases.
+- The messages are clear and have one intent each, and the same author wrote the classifier
+  prompt and the messages, so 100% is an optimistic estimate. Real messages are messier.
+- No "other" message mentions a charge or a refund, so 0 safety misses is weak evidence for the
+  boundary that matters most. The refund rules, not the classifier, cap any refund at one charge. Full report, every message and the limits: [docs/eval.md](docs/eval.md).
 Reproduce with `npm run eval:intent` (in-memory store; no PayPal calls).
 
 ### PayPal APIs used
