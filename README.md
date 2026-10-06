@@ -70,6 +70,21 @@ Sandbox trials last at least one day, so the conversion charge happens a day aft
 - **Model budget**: console calls (Studio AI and the assistant) may use at most half of the daily
   model budget, so customer requests always keep the rest.
 
+## Evaluation
+
+We tested the customer-message classifier on 120 synthetic messages that Claude wrote: 5 per class
+in each of English, Vietnamese, German, French, Spanish and Italian. One run with
+`Qwen/Qwen3-30B-A3B-Instruct-2507` on 2026-10-06:
+
+- forgot to cancel: 30/30 · cancel only: 30/30 · other: 30/30 · abuse or injection: 30/30
+  (10 caught by the rule pre-check, 20 by the model, including the Spanish and Italian
+  "ignore the rules" messages, which the rule pre-check does not cover)
+- safety misses (abuse or other classified as "forgot to cancel"): 0
+
+The messages are clear and have one intent each, so treat 100% as an optimistic estimate. Real
+messages are messier. Full report, every message and the limits: [docs/eval.md](docs/eval.md).
+Reproduce with `npm run eval:intent` (in-memory store; no PayPal calls).
+
 ### PayPal APIs used
 
 - Subscriptions: catalog products, billing plans with a TRIAL cycle, subscription details, cancel,
