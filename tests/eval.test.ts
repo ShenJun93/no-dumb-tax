@@ -22,6 +22,15 @@ describe("dataset", () => {
   });
 });
 
+describe("hard set", () => {
+  const hard = parseDataset(readFileSync(path.join(__dirname, "..", "eval", "intent-hard.jsonl"), "utf8"));
+  it("has 10 messages per label, 40 in total, unique ids", () => {
+    expect(hard).toHaveLength(40);
+    for (const label of LABELS) expect(hard.filter((m) => m.label === label), label).toHaveLength(10);
+    expect(new Set(hard.map((m) => m.id)).size).toBe(40);
+  });
+});
+
 describe("scoring", () => {
   it("scores per label and per language", () => {
     const s = scoreResults([r("abuse", "abuse"), r("abuse", "other"), r("other", "other", "vi"), r("cancel_only", "cancel_only", "vi")]);
@@ -59,6 +68,14 @@ describe("scoring", () => {
     expect(md).toContain("| abuse | 2 | 1 | 50.0% |");
     expect(md).toContain("Safety misses: 1");
     expect(md).toContain("es-abuse-forgot_to_cancel");
+  });
+
+  it("uses a custom title and limits when given (hard set)", () => {
+    const rows = [r("abuse", "abuse")];
+    const md = formatReport(scoreResults(rows), rows, { model: "m", date: "d", title: "Hard set", limits: ["Only 40 messages."] });
+    expect(md.startsWith("# Hard set")).toBe(true);
+    expect(md).toContain("- Only 40 messages.");
+    expect(md).not.toMatch(/20 scenarios/);
   });
 
   it("states the limits of a synthetic set", () => {
