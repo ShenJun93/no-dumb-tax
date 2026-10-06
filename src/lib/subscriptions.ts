@@ -112,6 +112,16 @@ export class SubscriptionService {
     };
   }
 
+  /** Facts for dashboards: cached briefly so a page of subscriptions does not hit PayPal on every refresh. */
+  async getFactsCached(id: string, now: Date = new Date(), ttlSec = 120): Promise<SubscriptionFacts> {
+    const key = `facts:${id}`;
+    const hit = await this.store.get<SubscriptionFacts>(key);
+    if (hit) return hit;
+    const facts = await this.getFacts(id, now);
+    await this.store.set(key, facts, ttlSec);
+    return facts;
+  }
+
   async cancel(id: string, reason: string): Promise<"cancelled" | "already"> {
     try {
       await this.pp.request("POST", `/v1/billing/subscriptions/${encodeURIComponent(id)}/cancel`, { reason: reason.slice(0, 127) });

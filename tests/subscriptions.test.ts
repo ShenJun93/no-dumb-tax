@@ -92,6 +92,13 @@ describe("SubscriptionService", () => {
     expect(await svc.cancel("I-1", "test")).toBe("already");
   });
 
+  it("caches facts for a short time", async () => {
+    const { svc, calls } = service();
+    await svc.getFactsCached("I-1");
+    await svc.getFactsCached("I-1");
+    expect(calls.filter((c) => /subscriptions\/I-1$/.test(c.url))).toHaveLength(1);
+  });
+
   it("refunds with an idempotency key and the exact amount", async () => {
     const { svc, calls } = service({
       "POST https://pp.test/v2/payments/captures/TX1/refund": () => json(201, { id: "R-1", status: "COMPLETED" }),
