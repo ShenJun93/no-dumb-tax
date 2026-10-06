@@ -17,6 +17,8 @@ export interface CustomerRequest {
   reply: string;
   createdAt: string;
   result?: string;
+  /** The subscription was already cancelled for this request (a queued refund still waits for the merchant). */
+  cancelled?: boolean;
 }
 
 export interface AuditEntry {
@@ -41,13 +43,16 @@ async function audit(d: Deps, e: Omit<AuditEntry, "at">) {
   await d.store.lpush("audit", { at: nowOf(d).toISOString(), ...e });
 }
 
+async function cancelNow(d: Deps, r: CustomerRequest, actor: "auto" | "merchant"): Promise<string> {
+  const c = await d.subs.cancel(r.subscriptionId, "Customer request via No Dumb Tax");
+  r.cancelled = true;
+  await audit(d, { requestId: r.id, subscriptionId: r.subscriptionId, action: "cancel", actor, detail: c });
+  return `cancel: ${c}`;
+}
+
 async function execute(d: Deps, r: CustomerRequest, actor: "auto" | "merchant"): Promise<string> {
   const notes: string[] = [];
-  if (r.decision.cancel) {
-    const c = await d.subs.cancel(r.subscriptionId, "Customer request via No Dumb Tax");
-    notes.push(`cancel: ${c}`);
-    await audit(d, { requestId: r.id, subscriptionId: r.subscriptionId, action: "cancel", actor, detail: c });
-  }
+  if (r.decision.cancel && !r.cancelled) notes.push(await cancelNow(d, r, actor));
   if (r.decision.refund) {
     const { paymentId, amount, currency } = r.decision.refund;
     const refund = await d.subs.refund(paymentId, amount, currency, r.id);
@@ -67,21 +72,44 @@ export async function handleCustomerRequest(
   input: { subscriptionId: string; message: string; requestKey?: string },
 ): Promise<CustomerRequest> {
   const id = randomUUID();
-  if (input.requestKey) {
+  const reqKey = input.requestKey ? `reqkey:${input.subscriptionId}:${input.requestKey}` : null;
+  if (reqKey) {
     // Claim the key atomically so a double click cannot run the request twice.
-    const key = `reqkey:${input.subscriptionId}:${input.requestKey}`;
-    if (!(await d.store.setnx(key, id, 86400))) {
-      const existing = await d.store.get<string>(key);
+    if (!(await d.store.setnx(reqKey, id, 86400))) {
+      const existing = await d.store.get<string>(reqKey);
       const r = existing ? await d.store.get<CustomerRequest>(`req:${existing}`) : null;
       if (r) return r;
-      throw new Error("This request is already being handled");
+      throw new RequestBusy("This request is already being handled");
     }
   }
+  // One request per subscription at a time: refund counters are read and written inside this lock.
+  const lock = `lock:sub:${input.subscriptionId}`;
+  if (!(await d.store.setnx(lock, id, 60))) {
+    if (reqKey) await d.store.del(reqKey);
+    throw new RequestBusy("Another request for this subscription is being handled. Please try again in a minute.");
+  }
+  try {
+    return await processRequest(d, input, id);
+  } catch (e) {
+    if (reqKey) await d.store.del(reqKey);
+    throw e;
+  } finally {
+    await d.store.del(lock);
+  }
+}
 
+export class RequestBusy extends Error {}
+
+async function processRequest(d: Deps, input: { subscriptionId: string; message: string }, id: string): Promise<CustomerRequest> {
   const facts = await d.subs.getFacts(input.subscriptionId, nowOf(d));
   const cls = await classify(input.message, d.llm);
   const priorRefunds = (await d.store.get<number>(`refunds:${input.subscriptionId}`)) ?? 0;
-  const decision = decide({ facts, intent: cls.intent, priorRefunds, now: nowOf(d) });
+  let decision = decide({ facts, intent: cls.intent, priorRefunds, now: nowOf(d) });
+  if (cls.source === "fallback") {
+    // The model could not read the message: show the merchant what a forgotten-trial request would get.
+    const proposal = decide({ facts, intent: "forgot_to_cancel", priorRefunds, now: nowOf(d) });
+    decision = { ...proposal, mode: "merchant", reasons: ["The assistant could not read this message; a person must decide.", ...proposal.reasons] };
+  }
   const r: CustomerRequest = {
     id,
     subscriptionId: input.subscriptionId,
@@ -96,19 +124,20 @@ export async function handleCustomerRequest(
   await audit(d, { requestId: id, subscriptionId: r.subscriptionId, action: "request", actor: "customer", detail: `${cls.intent} (${cls.source})` });
 
   let outcome: "done" | "queued" | "failed" = decision.mode === "merchant" ? "queued" : "done";
-  if (decision.mode === "auto") {
-    try {
-      r.result = await execute(d, r, "auto");
-    } catch (e) {
-      r.status = "failed";
-      r.result = (e as Error).message;
-      outcome = "failed";
-      await audit(d, { requestId: id, subscriptionId: r.subscriptionId, action: "error", actor: "auto", detail: r.result });
-    }
+  try {
+    if (decision.mode === "auto") r.result = await execute(d, r, "auto");
+    // A customer who asked to stop is stopped now; only the refund waits for the merchant.
+    else if (decision.mode === "merchant" && decision.cancel && cls.source === "model") r.result = await cancelNow(d, r, "auto");
+  } catch (e) {
+    r.status = "failed";
+    r.result = (e as Error).message;
+    outcome = "failed";
+    await audit(d, { requestId: id, subscriptionId: r.subscriptionId, action: "error", actor: "auto", detail: r.result });
   }
   if (r.status === "pending" || r.status === "failed") await d.store.lpush("queue", id);
   await d.store.lpush("requests", id);
-  r.reply = (await draftReply({ facts, decision, outcome, language: cls.language, llm: d.llm })).text;
+  const shown = outcome === "queued" ? { ...decision, cancel: r.cancelled === true } : decision;
+  r.reply = (await draftReply({ facts, decision: shown, outcome, language: cls.language, llm: d.llm })).text;
   await save(d, r);
   return r;
 }

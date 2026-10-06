@@ -10,6 +10,7 @@ export interface Store {
   lpush(key: string, value: unknown): Promise<void>;
   lrange<T>(key: string, start: number, stop: number): Promise<T[]>;
   lrem(key: string, value: string): Promise<void>;
+  del(key: string): Promise<void>;
 }
 
 type Entry = { value: unknown; expires: number | null };
@@ -66,6 +67,9 @@ export class MemoryStore implements Store {
     const cur = (this.live(key)?.value as T[]) ?? [];
     return structuredClone(cur.slice(start, stop === -1 ? undefined : stop + 1));
   }
+  async del(key: string) {
+    this.data.delete(key);
+  }
   async lrem(key: string, value: string) {
     const cur = (this.live(key)?.value as unknown[]) ?? [];
     this.put(key, cur.filter((v) => v !== value));
@@ -105,12 +109,24 @@ export class RedisStore implements Store {
   async lrem(key: string, value: string) {
     await this.redis.lrem(key, 0, value);
   }
+  async del(key: string) {
+    await this.redis.del(key);
+  }
 }
 
 let memory: MemoryStore | null = null;
 
-export function getStore(): Store {
-  if (process.env.UPSTASH_REDIS_REST_URL) return new RedisStore(Redis.fromEnv());
+/** Upstash under either naming (its own, or the Vercel Marketplace KV_* names); memory only off Vercel. */
+export function storeFromEnv(env: Record<string, string | undefined>): Store {
+  const url = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
+  const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
+  if (url && token) return new RedisStore(new Redis({ url, token }));
+  // Serverless instances do not share memory, so a deployment without Redis would lose state silently.
+  if (env.VERCEL) throw new Error("No Redis configured: set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN");
   memory ??= new MemoryStore();
   return memory;
+}
+
+export function getStore(): Store {
+  return storeFromEnv(process.env);
 }

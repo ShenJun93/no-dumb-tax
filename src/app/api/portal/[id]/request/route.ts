@@ -1,5 +1,5 @@
 import { portalTokenOk } from "@/lib/auth";
-import { handleCustomerRequest } from "@/lib/requests";
+import { handleCustomerRequest, RequestBusy } from "@/lib/requests";
 import { services, type SubRecord } from "@/lib/services";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -10,6 +10,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const body = (await req.json().catch(() => ({}))) as { message?: string; requestKey?: string };
   const message = String(body.message ?? "").trim();
   if (!message) return Response.json({ error: "Empty message" }, { status: 400 });
-  const r = await handleCustomerRequest({ subs: ctx.subs, store: ctx.store, llm: ctx.llm }, { subscriptionId: id, message, requestKey: body.requestKey });
-  return Response.json({ status: r.status, reply: r.reply });
+  try {
+    const r = await handleCustomerRequest({ subs: ctx.subs, store: ctx.store, llm: ctx.llm }, { subscriptionId: id, message, requestKey: body.requestKey });
+    return Response.json({ status: r.status, reply: r.reply });
+  } catch (e) {
+    if (e instanceof RequestBusy) return Response.json({ error: e.message }, { status: 409 });
+    return Response.json({ error: "Something went wrong. Nothing was charged or refunded; please try again later." }, { status: 502 });
+  }
 }

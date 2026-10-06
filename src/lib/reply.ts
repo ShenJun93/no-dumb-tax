@@ -5,6 +5,9 @@ import type { SubscriptionFacts } from "./subscriptions";
 
 export function templateReply(f: SubscriptionFacts, d: Decision, outcome: "done" | "queued" | "failed"): string {
   if (outcome === "failed") return "We could not finish this automatically. The merchant has your request and will answer you directly.";
+  if (outcome === "queued" && d.cancel) {
+    return "Your subscription is cancelled, so you will not be charged again. A person at the merchant will look at your refund request and answer you.";
+  }
   if (outcome === "queued") return "Thanks — a person at the merchant will look at your request and answer you. Nothing has been charged or refunded yet because of this message.";
   const parts: string[] = [];
   if (d.refund) parts.push(`We refunded ${formatMoney(d.refund.amount, d.refund.currency)} to your PayPal account.`);

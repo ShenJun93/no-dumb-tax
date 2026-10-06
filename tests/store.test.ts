@@ -43,3 +43,12 @@ describe("MemoryStore", () => {
     expect(await s.get("t")).toBeNull();
   });
 });
+
+describe("MemoryStore del", () => {
+  it("deletes a key so setnx can claim it again", async () => {
+    const s = new MemoryStore();
+    await s.setnx("lock", 1, 60);
+    await s.del("lock");
+    expect(await s.setnx("lock", 2, 60)).toBe(true);
+  });
+});

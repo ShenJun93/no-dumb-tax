@@ -4,11 +4,7 @@ import { PayPalClient } from "./paypal";
 import { getStore } from "./store";
 import { SubscriptionService } from "./subscriptions";
 
-export interface SubRecord {
-  portalToken: string;
-  language: string;
-  createdAt: string;
-}
+export type { SubRecord } from "./portal";
 
 export function services() {
   const settings = loadSettings();

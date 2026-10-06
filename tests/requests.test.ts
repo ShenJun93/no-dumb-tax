@@ -53,12 +53,34 @@ describe("handleCustomerRequest", () => {
     expect(log.filter((l) => l.startsWith("refund"))).toHaveLength(1);
   });
 
-  it("queues a late charge for the merchant and executes nothing", async () => {
-    const { deps: d, log } = deps(72);
+  it("queues a late charge for the merchant but cancels at once", async () => {
+    const { deps: d, log } = deps(72, ['{"intent":"forgot_to_cancel","language":"en"}']); // no reply text from the model → template
     const r = await handleCustomerRequest(d, { subscriptionId: "I-1", message: "I forgot to cancel" });
     expect(r.status).toBe("pending");
-    expect(log).toEqual([]);
+    expect(log).toEqual(["cancel I-1"]);
     expect(await d.store.lrange("queue", 0, -1)).toEqual([r.id]);
+    expect(r.reply).toMatch(/cancelled/);
+  });
+
+  it("gives the merchant an actionable proposal when the model cannot classify", async () => {
+    const { deps: d, log } = deps(2, ["not json", "ok"]);
+    const r = await handleCustomerRequest(d, { subscriptionId: "I-1", message: "help me with my trial" });
+    expect(r.status).toBe("pending");
+    expect(log).toEqual([]);
+    expect(r.decision).toMatchObject({ mode: "merchant", cancel: true, refund: { paymentId: "TX1", amount: "9.99" } });
+    await approveRequest(d, r.id);
+    expect(log).toEqual(["cancel I-1", `refund TX1 9.99 ${r.id}`]);
+  });
+
+  it("refunds once when two different requests for one subscription arrive together", async () => {
+    const { deps: d, log } = deps();
+    d.llm = new FakeLlm((system) => (system.includes("sort customer messages") ? '{"intent":"forgot_to_cancel","language":"en"}' : "ok"));
+    const results = await Promise.allSettled([
+      handleCustomerRequest(d, { subscriptionId: "I-1", message: "I forgot to cancel", requestKey: "a" }),
+      handleCustomerRequest(d, { subscriptionId: "I-1", message: "I forgot to cancel!", requestKey: "b" }),
+    ]);
+    expect(log.filter((l) => l.startsWith("refund"))).toHaveLength(1);
+    expect(results.filter((r) => r.status === "fulfilled" && r.value.status === "failed")).toHaveLength(0);
   });
 
   it("queues an injection attempt without calling the model or PayPal", async () => {
@@ -91,11 +113,11 @@ describe("merchant actions", () => {
     expect(await d.store.lrange("queue", 0, -1)).toEqual([]);
   });
 
-  it("reject leaves money alone", async () => {
+  it("reject leaves money alone but the subscription stays cancelled", async () => {
     const { deps: d, log } = deps(72);
     const r = await handleCustomerRequest(d, { subscriptionId: "I-1", message: "I forgot to cancel" });
     expect((await rejectRequest(d, r.id, "used the service")).status).toBe("rejected");
-    expect(log).toEqual([]);
+    expect(log).toEqual(["cancel I-1"]);
   });
 
   it("customer one-click cancel is logged", async () => {
