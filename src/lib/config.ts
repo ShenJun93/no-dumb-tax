@@ -7,6 +7,7 @@ export interface Settings {
   paypalWebhookId: string;
   nebiusApiKey: string;
   nebiusModel: string;
+  studioModel: string;
   llmDailyCap: number;
   merchantToken: string;
   cronSecret: string;
@@ -23,6 +24,7 @@ export function loadSettings(env: Record<string, string | undefined> = process.e
     paypalWebhookId: get("PAYPAL_WEBHOOK_ID"),
     nebiusApiKey: get("NEBIUS_API_KEY"),
     nebiusModel: get("NEBIUS_MODEL", "Qwen/Qwen3-30B-A3B-Instruct-2507"),
+    studioModel: get("NEBIUS_STUDIO_MODEL", "Qwen/Qwen3-30B-A3B-Instruct-2507"),
     llmDailyCap: Number(get("LLM_DAILY_CAP", "200")),
     merchantToken: get("MERCHANT_TOKEN"),
     cronSecret: get("CRON_SECRET"),

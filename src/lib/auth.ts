@@ -17,3 +17,7 @@ export function portalTokenOk(stored: string | undefined, given: string | null):
 export function isCron(req: Request, secret: string): boolean {
   return Boolean(secret) && same(req.headers.get("authorization") ?? "", `Bearer ${secret}`);
 }
+
+export function isMerchantBearer(header: string | null, token: string): boolean {
+  return Boolean(token) && same(header ?? "", `Bearer ${token}`);
+}
