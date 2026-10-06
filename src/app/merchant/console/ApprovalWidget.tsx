@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { actionLabel, pendingItems, type PendingItem } from "@/lib/console/approvals";
+import { actionLabel, approvalMessage, pendingItems, type PendingItem } from "@/lib/console/approvals";
 import { REFRESH_EVENT } from "./Console";
 
 export function makeApprovalWidget(token: string) {
@@ -10,6 +10,7 @@ export function makeApprovalWidget(token: string) {
     const { dataMapping, widgetApi } = params;
     const [items, setItems] = useState<PendingItem[]>([]);
     const [busy, setBusy] = useState<string | null>(null);
+    const [notes, setNotes] = useState<Record<string, string>>({});
 
     useEffect(() => {
       const fields: any[] = dataMapping.fields ?? [];
@@ -18,23 +19,33 @@ export function makeApprovalWidget(token: string) {
         return;
       }
       widgetApi.setDisplayState("loading");
-      widgetApi.getData({ fields }).then((response: any) => {
-        const rows = response.results.rows.map((row: any) => Object.fromEntries(fields.map((f: any) => [String(f.fieldId ?? f.id).split(".").pop(), row[f.key]])));
-        const pending = pendingItems(rows);
-        setItems(pending);
-        widgetApi.setDisplayState(pending.length ? "displayed" : "noData");
-      });
+      widgetApi
+        .getData({ fields })
+        .then((response: any) => {
+          const rows = response.results.rows.map((row: any) => Object.fromEntries(fields.map((f: any) => [String(f.fieldId ?? f.id).split(".").pop(), row[f.key]])));
+          const pending = pendingItems(rows);
+          setItems(pending);
+          widgetApi.setDisplayState(pending.length ? "displayed" : "noData");
+        })
+        .catch(() => widgetApi.setDisplayState("error"));
     }, [params, dataMapping, widgetApi]);
 
     async function act(id: string, action: "approve" | "reject") {
       setBusy(id);
-      await fetch(`/api/merchant/requests/${id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-merchant-token": token },
-        body: JSON.stringify({ action, note: action === "reject" ? "Rejected by merchant" : undefined }),
-      });
-      setBusy(null);
-      window.dispatchEvent(new Event(REFRESH_EVENT));
+      try {
+        const r = await fetch(`/api/merchant/requests/${id}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-merchant-token": token },
+          body: JSON.stringify({ action, note: action === "reject" ? "Rejected by merchant" : undefined }),
+        });
+        const body = await r.json().catch(() => null);
+        setNotes((n) => ({ ...n, [id]: approvalMessage(r.status, body) }));
+      } catch {
+        setNotes((n) => ({ ...n, [id]: approvalMessage(0, null) }));
+      } finally {
+        setBusy(null);
+        window.dispatchEvent(new Event(REFRESH_EVENT));
+      }
     }
 
     return (
@@ -43,7 +54,9 @@ export function makeApprovalWidget(token: string) {
           <div key={it.id} className="card">
             <p>“{it.message}”</p>
             <p className="muted">
-              {it.subscriptionId} · {it.status} — {it.reasons}
+              {it.subscriptionId} · {it.status}
+              {it.cancelled ? " · already cancelled" : ""} — {it.reasons}
+              {it.result && it.status === "failed" ? ` · last attempt: ${it.result}` : ""}
             </p>
             <button disabled={busy === it.id} onClick={() => act(it.id, "approve")}>
               {actionLabel(it)}
@@ -51,6 +64,7 @@ export function makeApprovalWidget(token: string) {
             <button className="secondary" disabled={busy === it.id} onClick={() => act(it.id, "reject")}>
               Reject
             </button>
+            {notes[it.id] && <p className="muted">{notes[it.id]}</p>}
           </div>
         ))}
       </div>

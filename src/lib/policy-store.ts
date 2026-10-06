@@ -22,16 +22,23 @@ export function validatePolicy(input: unknown): RefundPolicy {
   return { autoRefundWindowHours: hours, maxAutoRefunds: max, onlyFirstCharge: first };
 }
 
-export async function savePolicy(store: Store, input: unknown): Promise<RefundPolicy> {
+async function logPolicy(store: Store, action: string, detail: string) {
+  await store.lpush("audit", { at: new Date().toISOString(), requestId: "-", subscriptionId: "-", action, actor: "merchant", detail });
+}
+
+/**
+ * `ttlSec` makes the change temporary: on the shared public demo every judge uses the same merchant
+ * token, so a changed policy returns to the defaults on its own (POLICY_RESET_HOURS).
+ */
+export async function savePolicy(store: Store, input: unknown, opts: { ttlSec?: number } = {}): Promise<RefundPolicy> {
   const policy = validatePolicy(input);
-  await store.set("policy", policy);
-  await store.lpush("audit", {
-    at: new Date().toISOString(),
-    requestId: "-",
-    subscriptionId: "-",
-    action: "policy",
-    actor: "merchant",
-    detail: JSON.stringify(policy),
-  });
+  await store.set("policy", policy, opts.ttlSec || undefined);
+  await logPolicy(store, "policy", JSON.stringify(policy));
   return policy;
+}
+
+export async function resetPolicy(store: Store): Promise<RefundPolicy> {
+  await store.del("policy");
+  await logPolicy(store, "policy-reset", JSON.stringify(DEFAULT_POLICY));
+  return DEFAULT_POLICY;
 }

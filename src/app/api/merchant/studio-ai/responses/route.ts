@@ -8,7 +8,7 @@ const SSE = { "Content-Type": "text/event-stream", "Cache-Control": "no-store" }
 export async function POST(req: Request) {
   const { store, settings } = services();
   if (!isMerchantBearer(req.headers.get("authorization"), settings.merchantToken)) return Response.json({ error: "Unauthorized" }, { status: 401 });
-  if (!(await takeLlmBudget(store, settings.llmDailyCap))) return Response.json({ error: "Daily model budget reached" }, { status: 429 });
+  if (!(await takeLlmBudget(store, settings.llmDailyCap, new Date(), "console"))) return Response.json({ error: "Daily model budget reached" }, { status: 429 });
   const body = prepareStudioRequest(await req.json().catch(() => null), settings.studioModel);
   const r = await fetch("https://api.tokenfactory.nebius.com/v1/responses", {
     method: "POST",

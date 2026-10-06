@@ -17,17 +17,19 @@ export default function PolicyPanel({ token }: { token: string }) {
     loadPolicy(token).then(setPolicy);
   }, [token]);
 
-  async function save() {
-    if (!policy) return;
+  async function send(method: "PUT" | "DELETE", okNote: string) {
     const r = await fetch("/api/merchant/policy", {
-      method: "PUT",
+      method,
       headers: { "Content-Type": "application/json", "x-merchant-token": token },
-      body: JSON.stringify(policy),
-    });
-    const j = await r.json();
-    setNote(r.ok ? "Saved. New requests use these rules." : j.error);
-    if (r.ok) setPolicy(j);
+      body: method === "PUT" ? JSON.stringify(policy) : undefined,
+    }).catch(() => null);
+    const j = r ? await r.json().catch(() => null) : null;
+    setNote(r?.ok ? okNote : (j?.error ?? "Could not save. Try again."));
+    if (r?.ok && j) setPolicy(j);
   }
+
+  const save = () => send("PUT", "Saved. New requests use these rules.");
+  const restore = () => send("DELETE", "Back to the default rules.");
 
   if (!policy) return null;
   return (
@@ -51,7 +53,8 @@ export default function PolicyPanel({ token }: { token: string }) {
             onChange={(e) => setPolicy({ ...policy, onlyFirstCharge: e.target.checked })} /> Only the first charge after a free trial
         </label>
       </p>
-      <button onClick={save}>Save rules</button> <span className="muted">{note}</span>
+      <button onClick={save}>Save rules</button>{" "}
+      <button className="secondary" onClick={restore}>Restore defaults</button> <span className="muted">{note}</span>
     </div>
   );
 }

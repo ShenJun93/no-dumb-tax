@@ -8,8 +8,8 @@ const row = (id: string, status: string, refundAmount: unknown, cancel: unknown)
 describe("approval helpers", () => {
   it("keeps pending and failed requests only, with typed values", () => {
     expect(pendingItems([row("a", "done", 9.99, true), row("b", "pending", "9.99", true), row("c", "failed", 0, false), row("d", "rejected", 1, true)])).toEqual([
-      { id: "b", subscriptionId: "I-1", status: "pending", refundAmount: 9.99, cancel: true, reasons: "Older than 48 hours.", message: "I forgot" },
-      { id: "c", subscriptionId: "I-1", status: "failed", refundAmount: 0, cancel: false, reasons: "Older than 48 hours.", message: "I forgot" },
+      { id: "b", subscriptionId: "I-1", status: "pending", refundAmount: 9.99, cancel: true, currency: "USD", cancelled: false, reasons: "Older than 48 hours.", message: "I forgot", result: "" },
+      { id: "c", subscriptionId: "I-1", status: "failed", refundAmount: 0, cancel: false, currency: "USD", cancelled: false, reasons: "Older than 48 hours.", message: "I forgot", result: "" },
     ]);
   });
 

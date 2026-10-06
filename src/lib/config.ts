@@ -12,6 +12,7 @@ export interface Settings {
   merchantToken: string;
   cronSecret: string;
   reminderWindowHours: number;
+  policyResetHours: number;
   publicBaseUrl: string;
 }
 
@@ -29,6 +30,7 @@ export function loadSettings(env: Record<string, string | undefined> = process.e
     merchantToken: get("MERCHANT_TOKEN"),
     cronSecret: get("CRON_SECRET"),
     reminderWindowHours: Number(get("REMINDER_WINDOW_HOURS", "48")),
+    policyResetHours: Number(get("POLICY_RESET_HOURS", "0")),
     publicBaseUrl: get("PUBLIC_BASE_URL", "http://localhost:3000"),
   };
 }

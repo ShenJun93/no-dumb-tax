@@ -34,6 +34,9 @@ export const SOURCE_FIELDS: Record<"subscriptions" | "requests" | "audit" | "kpi
     { id: "cancel", name: "Cancel", format: "booleanFormat" },
     { id: "reasons", name: "Rule reasons", format: "textFormat" },
     { id: "message", name: "Customer message", format: "textFormat" },
+    { id: "currency", name: "Currency", format: "textFormat" },
+    { id: "cancelled", name: "Already cancelled", format: "booleanFormat" },
+    { id: "result", name: "Last result", format: "textFormat" },
   ],
   audit: [
     { id: "at", name: "Time", ...when },
@@ -106,7 +109,7 @@ export function buildInitialState() {
     widgets: {
       queue: {
         type: "approvalQueue",
-        dataMapping: { fields: ["id", "subscriptionId", "status", "refundAmount", "cancel", "reasons", "message"].map((f) => ({ id: `requests.${f}` })) },
+        dataMapping: { fields: ["id", "subscriptionId", "status", "refundAmount", "currency", "cancel", "cancelled", "reasons", "message", "result"].map((f) => ({ id: `requests.${f}` })) },
         format: { title: { enabled: true, text: "Waiting for you" } },
       },
       all: grid("requests", ["createdAt", "subscriptionId", "intent", "status", "mode", "refundAmount", "cancel", "reasons", "message"], "All customer requests"),
@@ -127,4 +130,9 @@ export function buildInitialState() {
 
 export function widgetFieldIds(state: ReturnType<typeof buildInitialState>): string[] {
   return state.pages.flatMap((p) => Object.values(p.widgets).flatMap((w) => Object.values(w.dataMapping).flatMap((refs) => refs.map((r) => r.id))));
+}
+
+/** A failed refresh keeps the last good data, so Studio (and its chat, widgets and page) stays mounted. */
+export function nextConsoleData<T>(prev: T | undefined, fetched: T | undefined): T | undefined {
+  return fetched ?? prev;
 }

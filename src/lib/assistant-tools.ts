@@ -1,5 +1,5 @@
 import type { LocalTool } from "./assistant";
-import { buildDashboard } from "./dashboard";
+import { buildDashboard, listRequests } from "./dashboard";
 import { getPolicy } from "./policy-store";
 import type { Store } from "./store";
 import type { SubscriptionService } from "./subscriptions";
@@ -21,7 +21,7 @@ export function localTools(d: { store: Store; subs: Pick<SubscriptionService, "g
       name: "pending_requests",
       description: "Customer requests waiting for the merchant, with the proposed action and the rule-based reasons.",
       parameters: noArgs,
-      run: async () => (await buildDashboard(d)).requests.filter((r) => r.status === "pending" || r.status === "failed").slice(0, 20),
+      run: async () => (await listRequests(d.store)).filter((r) => r.status === "pending" || r.status === "failed").slice(0, 20),
     },
     {
       name: "refund_policy",

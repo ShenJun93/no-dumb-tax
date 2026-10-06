@@ -7,9 +7,14 @@ export interface Llm {
 
 export class LlmUnavailable extends Error {}
 
-/** One shared daily budget for every model call (classifier, reminders, assistant, Studio AI). */
-export async function takeLlmBudget(store: Store, cap: number, now: Date = new Date()): Promise<boolean> {
-  const used = await store.incr(`llm:${now.toISOString().slice(0, 10)}`, 2 * 86400);
+/**
+ * One daily budget for every model call (classifier, reminders, assistant, Studio AI).
+ * Console calls (assistant, Studio AI) may use at most half of it, so customer requests always have budget left.
+ */
+export async function takeLlmBudget(store: Store, cap: number, now: Date = new Date(), scope: "customer" | "console" = "customer"): Promise<boolean> {
+  const day = now.toISOString().slice(0, 10);
+  if (scope === "console" && (await store.incr(`llm:console:${day}`, 2 * 86400)) > Math.floor(cap / 2)) return false;
+  const used = await store.incr(`llm:${day}`, 2 * 86400);
   return used <= cap;
 }
 

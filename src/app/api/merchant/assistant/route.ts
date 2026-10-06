@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
   const client = new OpenAI({ apiKey: settings.nebiusApiKey, baseURL: "https://api.tokenfactory.nebius.com/v1/", timeout: 30_000, maxRetries: 1 });
   const create: ChatCreate = async (body) => {
-    if (!(await takeLlmBudget(store, settings.llmDailyCap))) throw new OverBudget("Daily model budget reached");
+    if (!(await takeLlmBudget(store, settings.llmDailyCap, new Date(), "console"))) throw new OverBudget("Daily model budget reached");
     return client.chat.completions.create(body);
   };
   const toolkit = new PayPalAgentToolkit({

@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AgStudio, AgStudioProvider } from "ag-studio-react";
 import { studioTheme } from "ag-studio";
-import { buildInitialState, studioData } from "@/lib/console/studio-state";
+import { buildInitialState, nextConsoleData, studioData } from "@/lib/console/studio-state";
 
 export const REFRESH_EVENT = "ndt:refresh";
 
@@ -18,12 +18,12 @@ export default function Console({ token, widgets, ai }: { token: string; widgets
   const initialState = useMemo(() => buildInitialState(), []);
 
   const fetchDashboard = useCallback(async () => {
-    const r = await fetch("/api/merchant/dashboard", { headers: { "x-merchant-token": token } });
-    return r.ok ? studioData(await r.json()) : undefined;
+    const r = await fetch("/api/merchant/dashboard", { headers: { "x-merchant-token": token } }).catch(() => null);
+    return r?.ok ? studioData(await r.json()) : undefined;
   }, [token]);
 
   useEffect(() => {
-    const refresh = () => fetchDashboard().then(setData);
+    const refresh = () => fetchDashboard().then((fetched) => setData((prev: any) => nextConsoleData(prev, fetched)));
     refresh();
     const timer = setInterval(refresh, 30_000);
     window.addEventListener(REFRESH_EVENT, refresh);

@@ -65,7 +65,10 @@ Sandbox trials last at least one day, so the conversion charge happens a day aft
   read-only tools (dashboard summary, pending requests, refund policy). Tools that move money or
   change a subscription are never offered to a model; the merchant still approves with a click.
 - **Refund rules** are editable in the console (window in hours, refunds per subscription, first
-  charge only) and validated in code.
+  charge only) and validated in code. On the shared public demo a change returns to the defaults
+  after 6 hours (`POLICY_RESET_HOURS`), and "Restore defaults" resets it at once.
+- **Model budget**: console calls (Studio AI and the assistant) may use at most half of the daily
+  model budget, so customer requests always keep the rest.
 
 ### PayPal APIs used
 
