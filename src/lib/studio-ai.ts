@@ -10,7 +10,16 @@ export function prepareStudioRequest(body: unknown, model: string): Record<strin
   const asked = Number(src.max_output_tokens);
   out.max_output_tokens = Number.isFinite(asked) && asked > 0 ? Math.min(asked, STUDIO_MAX_OUTPUT_TOKENS) : STUDIO_MAX_OUTPUT_TOKENS;
   for (const k of PASS_THROUGH) if (k in src) out[k] = src[k];
+  if (Array.isArray(out.input)) out.input = out.input.map(withId);
   return out;
+}
+
+// Nebius (unlike OpenAI) rejects earlier assistant messages and function calls in `input` that have no id.
+function withId(item: any, index: number): any {
+  if (!item || typeof item !== "object" || item.id) return item;
+  if (item.type === "message" && item.role === "assistant") return { ...item, id: `msg_${index}` };
+  if (item.type === "function_call") return { ...item, id: `fc_${index}` };
+  return item;
 }
 
 /**

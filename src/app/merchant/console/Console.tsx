@@ -37,7 +37,7 @@ export default function Console({ token, widgets, ai }: { token: string; widgets
   return (
     <AgStudioProvider licenseKey={process.env.NEXT_PUBLIC_AG_STUDIO_LICENSE || undefined} modules={ai ? ai.modules : undefined}>
       <div style={{ height: "80vh", width: "100%" }}>
-        <AgStudio data={data} initialState={initialState as any} theme={theme} widgets={widgets} ai={ai?.ai} />
+        <AgStudio data={data} initialState={initialState as any} theme={theme} widgets={widgets} ai={ai?.ai} mode="edit" />
       </div>
     </AgStudioProvider>
   );

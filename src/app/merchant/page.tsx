@@ -32,6 +32,15 @@ export default function Merchant() {
     fetchOverview().then(setData);
   }, [fetchOverview]);
 
+  // Studio widgets and AI are browser-only modules; build them once per token.
+  const [extras, setExtras] = useState<{ widgets: unknown; ai: unknown } | null>(null);
+  useEffect(() => {
+    if (!token) return;
+    Promise.all([import("./console/widgets"), import("./console/ai")]).then(([w, a]) =>
+      setExtras({ widgets: w.approvalWidgets(token), ai: a.studioAi(token) }),
+    );
+  }, [token]);
+
   async function runReminders() {
     await fetch("/api/merchant/reminders", { method: "POST", headers: { "x-merchant-token": token } });
     window.dispatchEvent(new Event("ndt:refresh"));
@@ -58,7 +67,7 @@ export default function Merchant() {
           <p className="muted">
             <button className="secondary" onClick={runReminders}>Run due reminders now</button>
           </p>
-          <Console token={token} />
+          {extras && <Console token={token} widgets={extras.widgets} ai={extras.ai} />}
         </>
       )}
     </div>

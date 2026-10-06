@@ -21,6 +21,27 @@ describe("prepareStudioRequest", () => {
     expect(prepareStudioRequest({ max_output_tokens: 300 }, "m").max_output_tokens).toBe(300);
     expect(prepareStudioRequest("junk", "m")).toEqual({ model: "m", stream: false, max_output_tokens: STUDIO_MAX_OUTPUT_TOKENS });
   });
+
+  it("gives earlier assistant items the ids Nebius requires", () => {
+    const out = prepareStudioRequest(
+      {
+        input: [
+          { type: "message", role: "user", content: "hi" },
+          { type: "message", role: "assistant", content: [{ type: "output_text", text: "ok" }] },
+          { type: "function_call", call_id: "c1", name: "view_schema", arguments: "{}" },
+          { type: "function_call_output", call_id: "c1", output: "{}" },
+          { type: "message", role: "assistant", id: "msg_keep", content: [] },
+        ],
+      },
+      "m",
+    );
+    const input = out.input as any[];
+    expect(input[0].id).toBeUndefined();
+    expect(input[1].id).toBe("msg_1");
+    expect(input[2].id).toBe("fc_2");
+    expect(input[3].id).toBeUndefined();
+    expect(input[4].id).toBe("msg_keep");
+  });
 });
 
 describe("responseToSse", () => {

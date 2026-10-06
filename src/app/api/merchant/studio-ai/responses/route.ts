@@ -17,6 +17,9 @@ export async function POST(req: Request) {
     signal: AbortSignal.timeout(60_000),
   }).catch(() => null);
   if (!r?.ok) {
+    // Server log only: the upstream reason, never the key or the prompt.
+    console.error("studio-ai upstream", r?.status ?? "timeout", r ? (await r.text()).slice(0, 600) : "");
+    if (process.env.STUDIO_AI_DEBUG) console.error("studio-ai input kinds", JSON.stringify((body.input as { type?: string; role?: string }[] | undefined)?.map((i) => i.type ?? i.role)));
     const error = { type: "error", code: `upstream_${r?.status ?? "timeout"}`, message: "The model service failed. Try again." };
     return new Response(`data: ${JSON.stringify(error)}\n\n`, { headers: SSE });
   }
