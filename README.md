@@ -87,8 +87,11 @@ Read these numbers with care:
 - The messages are clear and have one intent each, and the same author wrote the classifier
   prompt and the messages, so 100% is an optimistic estimate. Real messages are messier.
 - No "other" message mentions a charge or a refund, so 0 safety misses is weak evidence for the
-  boundary that matters most. The refund rules, not the classifier, cap any refund at one charge. Full report, every message and the limits: [docs/eval.md](docs/eval.md).
-Reproduce with `npm run eval:intent` (in-memory store; no PayPal calls).
+  boundary that matters most. The refund rules, not the classifier, cap any refund at one charge.
+
+Full report, every message and the limits: [docs/eval.md](docs/eval.md). Reproduce with
+`npm run eval:intent` (in-memory store; no PayPal calls; it refuses to overwrite the published run
+without a model key or when the model falls back).
 
 ### PayPal APIs used
 
