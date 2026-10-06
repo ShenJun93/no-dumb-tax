@@ -3,6 +3,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
+import PolicyPanel from "./console/PolicyPanel";
 
 const Console = dynamic(() => import("./console/Console"), { ssr: false, loading: () => <p className="muted">Loading the console…</p> });
 
@@ -68,6 +69,7 @@ export default function Merchant() {
             <button className="secondary" onClick={runReminders}>Run due reminders now</button>
           </p>
           {extras && <Console token={token} widgets={extras.widgets} ai={extras.ai} />}
+          <PolicyPanel token={token} />
         </>
       )}
     </div>

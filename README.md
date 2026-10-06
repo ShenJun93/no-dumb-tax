@@ -47,6 +47,26 @@ Sandbox trials last at least one day, so the conversion charge happens a day aft
 - **Reminders** appear in the customer portal before the first charge (`REMINDER_WINDOW_HOURS`,
   48 hours by default; the demo deployment uses 12 hours for its 1-day trial), once per conversion.
 
+### Merchant console
+
+- **AG Studio dashboard** (`/merchant`): KPI tiles (active trials, first charges in the next 24 h,
+  amount due, resolved automatically, refunded, waiting for you), a grid of trials and upcoming
+  charges, all customer requests, and the audit log, in a custom theme. The console opens in
+  AG Studio's edit mode, so the merchant can rearrange it or add widgets.
+- **Approval-queue widget**, a custom AG Studio widget: each waiting request shows the customer's
+  words, the rule-based reasons, and an Approve button that says exactly what will move
+  ("Approve: refund $9.99 and cancel").
+- **Studio Agent Framework**: Studio's chat agent runs on our own model proxy
+  (`/api/merchant/studio-ai/responses` → Nebius Token Factory, model chosen on the server, shared
+  daily budget). It can read the data, run queries and add widgets, and it has a custom tool,
+  `ask_paypal`, that calls the PayPal assistant.
+- **PayPal assistant** (`/api/merchant/assistant`): built on the PayPal Agent Toolkit with only
+  read tools (`show_subscription_details`, `list_disputes`, `get_dispute`, `get_refund`) plus local
+  read-only tools (dashboard summary, pending requests, refund policy). Tools that move money or
+  change a subscription are never offered to a model; the merchant still approves with a click.
+- **Refund rules** are editable in the console (window in hours, refunds per subscription, first
+  charge only) and validated in code.
+
 ### PayPal APIs used
 
 - Subscriptions: catalog products, billing plans with a TRIAL cycle, subscription details, cancel,
@@ -55,6 +75,7 @@ Sandbox trials last at least one day, so the conversion charge happens a day aft
 - Webhooks: signature verification (`/v1/notifications/verify-webhook-signature`); events for
   subscriptions, sales, refunds and disputes
 - JavaScript SDK subscribe button (`intent=subscription`)
+- PayPal Agent Toolkit (`@paypal/agent-toolkit`, OpenAI adapter), read-only actions
 
 ### AI used
 
@@ -65,12 +86,15 @@ Sandbox trials last at least one day, so the conversion charge happens a day aft
 ### Built with
 
 - Next.js 16, TypeScript, Vitest, Upstash Redis, Vercel (hosting and cron)
+- AG Studio 3 (`ag-studio-react`), a commercial library. Without `NEXT_PUBLIC_AG_STUDIO_LICENSE`
+  it runs with a watermark. `src/vendor/ag-studio/openaiAdapter.ts` is the Responses adapter from
+  the AG Studio docs, copied unmodified as the docs suggest.
 <!-- TODO before submission: APIMatic Context Plugin note, only once it has actually been used -->
 
 ## Setup
 
 ```bash
-cp .env.example .env.local   # PayPal sandbox app keys, Nebius key, Upstash Redis, random MERCHANT_TOKEN and CRON_SECRET
+cp .env.example .env.local   # PayPal sandbox app keys, Nebius key (and NEBIUS_STUDIO_MODEL), Upstash Redis, random MERCHANT_TOKEN and CRON_SECRET; optional NEXT_PUBLIC_AG_STUDIO_LICENSE
 npm install
 npm test
 npm run dev
