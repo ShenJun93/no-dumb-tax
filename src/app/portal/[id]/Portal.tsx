@@ -92,6 +92,7 @@ export default function Portal({ id, token }: { id: string; token: string }) {
         {view.requests.map((r, i) => (
           <p key={i} className="muted">
             {r.at}: “{r.message}” → {r.status}
+            {r.reply ? ` · ${r.reply}` : ""}
           </p>
         ))}
       </div>
