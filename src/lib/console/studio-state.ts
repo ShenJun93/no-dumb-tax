@@ -81,9 +81,10 @@ const grid = (source: keyof typeof SOURCE_FIELDS, fields: string[], title: strin
 });
 
 export function buildInitialState() {
-  const overview: Page = {
-    id: "overview",
-    name: "Overview",
+  // One page: AG Studio shows no page tabs in edit mode, so a second page would be unreachable.
+  const page: Page = {
+    id: "console",
+    name: "Console",
     widgets: {
       k1: kpi("activeTrials", "Active trials"),
       k2: kpi("chargesNext24h", "First charges in 24 h"),
@@ -91,7 +92,14 @@ export function buildInitialState() {
       k4: kpi("resolvedAutomatically", "Resolved automatically"),
       k5: kpi("refundedTotal", "Refunded"),
       k6: kpi("pendingApprovals", "Waiting for you"),
+      queue: {
+        type: "approvalQueue",
+        dataMapping: { fields: ["id", "subscriptionId", "status", "refundAmount", "currency", "cancel", "cancelled", "reasons", "message", "result"].map((f) => ({ id: `requests.${f}` })) },
+        format: { title: { enabled: true, text: "Waiting for you" } },
+      },
       upcoming: grid("subscriptions", ["id", "plan", "status", "inTrial", "nextCharge", "hoursToCharge", "price", "reminderSent", "charged", "refunded"], "Trials and upcoming charges"),
+      all: grid("requests", ["createdAt", "subscriptionId", "intent", "status", "mode", "refundAmount", "cancel", "reasons", "message"], "All customer requests"),
+      log: grid("audit", ["at", "actor", "action", "subscriptionId", "requestId", "detail"], "Audit log: every action and who took it"),
     },
     widgetLayout: {
       k1: { xTrack: 0, yTrack: 0, xSpan: 4, ySpan: 5 },
@@ -100,32 +108,13 @@ export function buildInitialState() {
       k4: { xTrack: 12, yTrack: 0, xSpan: 4, ySpan: 5 },
       k5: { xTrack: 16, yTrack: 0, xSpan: 4, ySpan: 5 },
       k6: { xTrack: 20, yTrack: 0, xSpan: 4, ySpan: 5 },
-      upcoming: { xTrack: 0, yTrack: 5, xSpan: 24, ySpan: 14 },
+      queue: { xTrack: 0, yTrack: 5, xSpan: 24, ySpan: 12 },
+      upcoming: { xTrack: 0, yTrack: 17, xSpan: 24, ySpan: 12 },
+      all: { xTrack: 0, yTrack: 29, xSpan: 24, ySpan: 12 },
+      log: { xTrack: 0, yTrack: 41, xSpan: 24, ySpan: 14 },
     },
   };
-  const approvals: Page = {
-    id: "approvals",
-    name: "Approvals",
-    widgets: {
-      queue: {
-        type: "approvalQueue",
-        dataMapping: { fields: ["id", "subscriptionId", "status", "refundAmount", "currency", "cancel", "cancelled", "reasons", "message", "result"].map((f) => ({ id: `requests.${f}` })) },
-        format: { title: { enabled: true, text: "Waiting for you" } },
-      },
-      all: grid("requests", ["createdAt", "subscriptionId", "intent", "status", "mode", "refundAmount", "cancel", "reasons", "message"], "All customer requests"),
-    },
-    widgetLayout: {
-      queue: { xTrack: 0, yTrack: 0, xSpan: 24, ySpan: 12 },
-      all: { xTrack: 0, yTrack: 12, xSpan: 24, ySpan: 14 },
-    },
-  };
-  const audit: Page = {
-    id: "audit",
-    name: "Audit log",
-    widgets: { log: grid("audit", ["at", "actor", "action", "subscriptionId", "requestId", "detail"], "Every action and who took it") },
-    widgetLayout: { log: { xTrack: 0, yTrack: 0, xSpan: 24, ySpan: 24 } },
-  };
-  return { pages: [overview, approvals, audit], selectedPageId: "overview", panels: { filters: { collapsed: true }, edit: { collapsed: true } } };
+  return { pages: [page], selectedPageId: "console", panels: { filters: { collapsed: true }, edit: { collapsed: true } } };
 }
 
 export function widgetFieldIds(state: ReturnType<typeof buildInitialState>): string[] {

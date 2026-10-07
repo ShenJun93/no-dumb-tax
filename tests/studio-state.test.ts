@@ -9,6 +9,17 @@ describe("studio state", () => {
     for (const id of used) expect(declared, id).toContain(id);
   });
 
+  it("puts everything on one page, approval queue right under the KPIs (Studio's edit mode has no page tabs)", () => {
+    const state = buildInitialState();
+    expect(state.pages).toHaveLength(1);
+    const page = state.pages[0];
+    expect(Object.values(page.widgets).map((w) => w.type)).toEqual(expect.arrayContaining(["approvalQueue", "grid", "value"]));
+    const queueY = page.widgetLayout.queue.yTrack;
+    const kpiBottom = Math.max(...Object.entries(page.widgetLayout).filter(([id]) => id.startsWith("k")).map(([, l]) => l.yTrack + l.ySpan));
+    expect(queueY).toBe(kpiBottom);
+    expect(Object.keys(page.widgets)).toEqual(expect.arrayContaining(["upcoming", "all", "log"]));
+  });
+
   it("lays out every widget inside 24 columns without overlap", () => {
     for (const page of buildInitialState().pages) {
       const ids = Object.keys(page.widgets);
