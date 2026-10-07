@@ -43,6 +43,13 @@ describe("applyWebhookEvent", () => {
     expect(await store.smembers("subs")).toEqual(["I-1"]);
   });
 
+  it("links a v2 capture refund event to its subscription through the stored refund id", async () => {
+    const store = new MemoryStore();
+    await store.set("refundsub:R-1", "I-1");
+    await applyWebhookEvent(store, { id: "WH-3", event_type: "PAYMENT.CAPTURE.REFUNDED", create_time: "t", resource: { id: "R-1" } });
+    expect((await store.lrange<{ subscriptionId: string | null }>("events", 0, 0))[0].subscriptionId).toBe("I-1");
+  });
+
   it("counts disputes", async () => {
     const store = new MemoryStore();
     await applyWebhookEvent(store, { id: "WH-2", event_type: "CUSTOMER.DISPUTE.CREATED", create_time: "t", resource: { dispute_id: "D-1" } });

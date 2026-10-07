@@ -31,6 +31,7 @@ describe("handleCustomerRequest", () => {
     expect(r.status).toBe("done");
     expect(log).toEqual(["cancel I-1", `refund TX1 9.99 ${r.id}`]);
     expect(await d.store.get("refunds:I-1")).toBe(1);
+    expect(await d.store.get("refundsub:R-1")).toBe("I-1");
     const audit = await d.store.lrange<any>("audit", 0, -1);
     expect(audit.map((a) => a.action)).toEqual(["refund", "cancel", "request"]);
     expect(audit.every((a) => a.actor === "auto" || a.actor === "customer")).toBe(true);

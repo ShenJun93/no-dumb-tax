@@ -58,6 +58,8 @@ async function execute(d: Deps, r: CustomerRequest, actor: "auto" | "merchant"):
     const { paymentId, amount, currency } = r.decision.refund;
     const refund = await d.subs.refund(paymentId, amount, currency, r.id);
     await d.store.incr(`refunds:${r.subscriptionId}`);
+    // Refund webhooks (v2 capture refunds) carry no subscription id; remember which one this was.
+    await d.store.set(`refundsub:${refund.id}`, r.subscriptionId, 90 * 86400);
     notes.push(`refund ${refund.id}: ${refund.status}`);
     await audit(d, { requestId: r.id, subscriptionId: r.subscriptionId, action: "refund", actor, detail: `${amount} ${currency} of ${paymentId} → ${refund.id} ${refund.status}` });
   }

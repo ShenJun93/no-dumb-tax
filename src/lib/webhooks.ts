@@ -38,7 +38,10 @@ export async function applyWebhookEvent(store: Store, event: any): Promise<"appl
   const summary: WebhookSummary = {
     id: event.id,
     type: event.event_type,
-    subscriptionId: subscriptionIdOf(event),
+    // A v2 capture refund event names only the refund; we stored which subscription it belongs to.
+    subscriptionId:
+      subscriptionIdOf(event) ??
+      (event.event_type === "PAYMENT.CAPTURE.REFUNDED" ? await store.get<string>(`refundsub:${event.resource?.id}`) : null),
     time: event.create_time,
   };
   await store.lpush("events", summary);
