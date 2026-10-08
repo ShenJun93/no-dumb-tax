@@ -166,7 +166,6 @@ without a model key or when the model falls back).
 - AG Studio 3 (`ag-studio-react`), a commercial library. Without `NEXT_PUBLIC_AG_STUDIO_LICENSE`
   it runs with a watermark. `src/vendor/ag-studio/openaiAdapter.ts` is the Responses adapter from
   the AG Studio docs, copied unmodified as the docs suggest.
-<!-- TODO before submission: APIMatic Context Plugin note, only once it has actually been used -->
 
 ## Setup
 
