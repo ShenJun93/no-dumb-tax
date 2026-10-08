@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { registerSubscription } from "@/lib/portal";
+import { portalView, registerSubscription } from "@/lib/portal";
 import { MemoryStore } from "@/lib/store";
 import type { SubscriptionFacts } from "@/lib/subscriptions";
 
@@ -28,5 +28,27 @@ describe("registerSubscription", () => {
     expect((await registerSubscription(d, { subscriptionId: "nope" })).status).toBe(400);
     d.subs.getFacts = async () => ({ ...facts, planId: "P-OTHER" });
     expect((await registerSubscription(d, { subscriptionId: "I-ABCDEF1" })).status).toBe(403);
+  });
+});
+
+describe("portalView", () => {
+  const trial = {
+    id: "I-ABCDEF1", status: "ACTIVE", planId: "P-1", planName: "Notely Pro", price: { value: "9.99", currency: "USD" },
+    hadTrial: true, trialDays: 1, inTrial: true, startTime: "2026-10-07T16:00:00Z", nextBillingTime: "2026-10-08T10:00:00Z", payments: [],
+  } as SubscriptionFacts;
+  const reminder = { text: "Heads-up: your free trial ends soon." };
+  const request = { createdAt: "2026-10-08T14:01:59.311Z", message: "I forgot to cancel", status: "done" as const, reply: "We refunded $9.99." };
+
+  it("shows the reminder only while the trial runs", () => {
+    expect(portalView(trial, reminder, []).reminder).toEqual(reminder);
+    const charged = { ...trial, inTrial: false, payments: [{ id: "T1", status: "COMPLETED", amount: "9.99", currency: "USD", time: "2026-10-08T13:59:00Z" }] };
+    expect(portalView(charged, reminder, []).reminder).toBeNull();
+    expect(portalView({ ...trial, status: "CANCELLED" }, reminder, []).reminder).toBeNull();
+  });
+
+  it("formats request times like the rest of the portal", () => {
+    expect(portalView(trial, null, [request]).requests).toEqual([
+      { at: "8 Oct 2026, 14:01 UTC", message: "I forgot to cancel", status: "done", reply: "We refunded $9.99." },
+    ]);
   });
 });

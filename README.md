@@ -73,8 +73,9 @@ Sandbox trials last at least one day, so the conversion charge happens a day aft
   ("Approve: refund $9.99 and cancel").
 - **Studio Agent Framework**: Studio's chat agent runs on our own model proxy
   (`/api/merchant/studio-ai/responses` → Nebius Token Factory, model chosen on the server, shared
-  daily budget). It can read the data, run queries and add widgets, and it has a custom tool,
-  `ask_paypal`, that calls the PayPal assistant.
+  daily budget). Its custom tool, `ask_paypal`, calls the PayPal assistant, so the merchant can ask
+  about subscriptions, refunds and disputes from inside the console. Studio's own widget-building
+  and query tools are wired up but not reliable with our model (see Limitations).
 - **PayPal assistant** (`/api/merchant/assistant`): built on the PayPal Agent Toolkit with only
   read tools (`show_subscription_details`, `list_disputes`, `get_dispute`, `get_refund`) plus local
   read-only tools (dashboard summary, pending requests, refund policy). Tools that move money or
@@ -188,6 +189,10 @@ node --env-file=.env.local scripts/register-webhook.mjs <baseUrl>    # prints th
 - Sandbox only; USD only in the demo.
 - Reminders are shown in the customer portal; email and SMS delivery are out of scope.
 - One merchant per deployment (no "Connect with PayPal" onboarding).
+- AG Studio's agent on Qwen3-30B: asked to add a KPI tile, it reports success but the tile renders
+  empty, and a data question once made the model print a raw tool call as text (rechecked
+  2026-10-08 with four phrasings). The `ask_paypal` tool works. A stronger tool-calling model behind
+  the same proxy may fix this; not tested.
 
 ## License
 

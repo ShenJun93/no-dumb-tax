@@ -49,7 +49,8 @@ def caption(page, text: str) -> None:
                  if (!c) { c = document.createElement('div'); c.id = 'cap';
                    c.style.cssText = 'position:fixed;left:0;right:0;bottom:0;padding:16px 28px;'
                      + 'background:rgba(20,20,20,.9);color:#fff;font:600 22px/1.35 system-ui;z-index:99999';
-                   document.body.appendChild(c); }
+                   document.body.appendChild(c);
+                   document.body.style.paddingBottom = '120px'; }  // keep the page's last lines above the bar
                  c.textContent = t; }""",
         text,
     )

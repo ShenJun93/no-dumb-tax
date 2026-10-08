@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
+import { formatDate, formatMoney } from "./facts";
+import type { CustomerRequest } from "./requests";
 import type { Store } from "./store";
-import type { SubscriptionService } from "./subscriptions";
+import type { SubscriptionFacts, SubscriptionService } from "./subscriptions";
 
 export interface SubRecord {
   portalToken: string;
@@ -31,4 +33,22 @@ export async function registerSubscription(
   }
   await d.store.sadd("subs", id);
   return { status: 200, body: { portalUrl: `${d.publicBaseUrl}/portal/${id}?t=${record.portalToken}` } };
+}
+
+/** What the customer's portal shows. The reminder is about the coming first charge, so it goes once the trial is over. */
+export function portalView(
+  f: SubscriptionFacts,
+  reminder: { text: string } | null,
+  requests: Pick<CustomerRequest, "createdAt" | "message" | "status" | "reply">[],
+) {
+  return {
+    plan: f.planName,
+    status: f.status,
+    price: formatMoney(f.price.value, f.price.currency),
+    inTrial: f.inTrial,
+    nextCharge: f.nextBillingTime ? formatDate(f.nextBillingTime) : null,
+    payments: f.payments.map((p) => ({ status: p.status, amount: formatMoney(p.amount, p.currency), at: formatDate(p.time) })),
+    reminder: f.status === "ACTIVE" && f.inTrial ? reminder : null,
+    requests: requests.map((r) => ({ at: formatDate(r.createdAt), message: r.message, status: r.status, reply: r.reply })),
+  };
 }

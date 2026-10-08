@@ -1,5 +1,5 @@
 import { portalTokenOk } from "@/lib/auth";
-import { formatDate, formatMoney } from "@/lib/facts";
+import { portalView } from "@/lib/portal";
 import { runDueReminders } from "@/lib/reminders";
 import type { CustomerRequest } from "@/lib/requests";
 import { services, type SubRecord } from "@/lib/services";
@@ -17,14 +17,5 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const r = await ctx.store.get<CustomerRequest>(`req:${rid}`);
     if (r?.subscriptionId === id) requests.push(r);
   }
-  return Response.json({
-    plan: f.planName,
-    status: f.status,
-    price: formatMoney(f.price.value, f.price.currency),
-    inTrial: f.inTrial,
-    nextCharge: f.nextBillingTime ? formatDate(f.nextBillingTime) : null,
-    payments: f.payments.map((p) => ({ status: p.status, amount: formatMoney(p.amount, p.currency), at: formatDate(p.time) })),
-    reminder: await ctx.store.get(`reminder:${id}`),
-    requests: requests.map((r) => ({ at: r.createdAt, message: r.message, status: r.status, reply: r.reply })),
-  });
+  return Response.json(portalView(f, (await ctx.store.get<{ text: string }>(`reminder:${id}`)) ?? null, requests));
 }
